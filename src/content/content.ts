@@ -384,8 +384,8 @@ export const stack: StackGroup[] = [
 
 export const about = {
   portrait: {
-    /** TODO(venkat): supply public/venkat.jpg (SPEC §3 row 7b). Placeholder is shown until then. */
-    src: null as string | null,
+    /** public/venkat.jpg: supplied by Venkat (Nov 7, 2026), cropped to 520×640 (2× the 260×320 slot). */
+    src: "/venkat.jpg" as string | null,
     alt: "Portrait of Venkata Reddy Ambati",
     placeholder: "[YOUR PHOTO]",
   },
