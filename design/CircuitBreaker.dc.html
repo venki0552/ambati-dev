@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo — Circuit breaker</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="box-sizing: border-box; width: 100%; padding: 22px; background: {{c.surface}}; color: {{c.text}}; font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', sans-serif; font-size: 15px; line-height: 1.5">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px">
+<div>
+<p style="margin: 0; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: {{c.muted}}">DEMO · RESILIENCE</p>
+<h3 style="margin: 4px 0 0; font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em">Circuit breaker</h3>
+</div>
+<div role="status" aria-label="Breaker state" style="display: flex; gap: 16px">
+<sc-for list="{{lamps}}" as="l" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+<span aria-hidden="true" style="width: 18px; height: 18px; border-radius: 50%; background: {{l.bg}}; box-shadow: {{l.glow}}; transition: background-color 150ms ease, box-shadow 150ms ease"></span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 9px; letter-spacing: 0.08em; color: {{l.fg}}">{{l.label}}</span>
+</div>
+</sc-for>
+</div>
+</div>
+
+<div style="position: relative; height: 70px; margin: 22px 0 6px">
+<div aria-hidden="true" style="position: absolute; left: 13px; right: 13px; top: 20px; height: 2px; background: {{c.line}}"></div>
+<div style="position: absolute; left: 0; top: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px">
+<span aria-hidden="true" style="width: 26px; height: 26px; box-sizing: border-box; border-radius: 7px; border: 2px solid {{c.text}}; background: {{c.surface}}"></span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}">CLIENT</span>
+</div>
+<div style="position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px">
+<span aria-hidden="true" style="width: 26px; height: 26px; box-sizing: border-box; border-radius: 7px; border: 3px solid {{gate}}; background: {{c.surface}}; transition: border-color 150ms ease"></span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}">BREAKER</span>
+</div>
+<div style="position: absolute; right: 0; top: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 8px">
+<span aria-hidden="true" style="width: 26px; height: 26px; box-sizing: border-box; border-radius: 7px; border: 2px solid {{c.text}}; background: {{c.surface}}"></span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}">CORE BANKING API</span>
+</div>
+<div aria-hidden="true" style="position: absolute; left: 13px; right: 13px; top: 0; height: 40px">
+<sc-if value="{{showDot}}" hint-placeholder-val="{{ false }}">
+<span style="position: absolute; top: 14px; left: {{dotLeft}}; width: 14px; height: 14px; border-radius: 50%; background: {{dotColor}}; box-shadow: 0 0 12px {{dotColor}}; transition: left 520ms cubic-bezier(.4,0,.2,1)"></span>
+</sc-if>
+</div>
+</div>
+
+<p style="margin: 4px 0 14px; font-size: 16px; font-weight: 500">{{statusText}}</p>
+
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px">
+<span style="font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.08em; color: {{c.muted}}">LAST 6 CALLS</span>
+<div style="display: flex; gap: 6px">
+<sc-for list="{{cells}}" as="cell" hint-placeholder-count="6">
+<span style="width: 18px; height: 18px; box-sizing: border-box; border-radius: 4px; border: 1px solid {{c.line}}; background: {{cell.bg}}"></span>
+</sc-for>
+</div>
+<span style="font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}">{{failSummary}}</span>
+</div>
+
+<label style="display: block; margin-bottom: 16px; font-size: 14px">Downstream failure rate: <strong>{{rate}}%</strong>
+<input type="range" min="0" max="100" step="10" value="{{rate}}" onChange="{{onRate}}" style="display: block; width: 100%; margin-top: 6px; accent-color: {{c.signal}}">
+</label>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{onSend}}" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: {{c.signal}}; color: {{c.onSignal}}; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer">Send request</button>
+<button type="button" aria-pressed="{{auto}}" onClick="{{onAuto}}" style="min-height: 44px; padding: 0 16px; border: 1.5px solid {{autoBorder}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-weight: 500; font-size: 15px; cursor: pointer">{{autoLabel}}</button>
+<button type="button" onClick="{{onReset}}" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: {{c.muted}}; font-family: inherit; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer">Reset</button>
+</div>
+
+<div aria-live="polite" style="margin-top: 18px; padding-top: 12px; min-height: 120px; border-top: 1px solid {{c.line}}; font-family: 'Martian Mono', monospace; font-size: 11px; line-height: 1.5">
+<sc-for list="{{log}}" as="e" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; padding: 3px 0; color: {{e.color}}"><span aria-hidden="true" style="color: {{c.muted}}">›</span><span>{{e.text}}</span></div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":600,"height":640}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.seq = 1;
+    this.state = { mode: 'closed', win: [], rate: 40, cooldown: 0, auto: false, busy: false, dot: null, dotPos: 0, log: [{ id: 0, text: 'Ready · breaker CLOSED', kind: 'info' }] };
+  }
+  componentDidMount() {
+    var self = this;
+    this.tick = setInterval(function () { self.onTick(); }, 1000);
+    this.autoT = setInterval(function () { if (self.state.auto) self.send(); }, 900);
+  }
+  componentWillUnmount() {
+    clearInterval(this.tick); clearInterval(this.autoT); clearTimeout(this.t1); clearTimeout(this.t2);
+  }
+  entry(text, kind, log) {
+    return [{ id: this.seq++, text: text, kind: kind }].concat(log || this.state.log).slice(0, 5);
+  }
+  onTick() {
+    var s = this.state;
+    if (s.mode !== 'open') return;
+    if (s.cooldown > 1) { this.setState({ cooldown: s.cooldown - 1 }); return; }
+    this.setState({ mode: 'half', cooldown: 0, log: this.entry('HALF-OPEN · the next call is a trial', 'warn') });
+  }
+  send() {
+    var self = this;
+    var s = this.state;
+    if (s.busy) return;
+    if (s.mode === 'open') {
+      this.setState({ busy: true, dot: 'block', dotPos: 0 });
+      this.t1 = setTimeout(function () { self.setState({ dotPos: 50 }); }, 30);
+      this.t2 = setTimeout(function () {
+        self.setState({ busy: false, dot: null, dotPos: 0, log: self.entry('503 · fallback served, downstream not called', 'stop') });
+      }, 560);
+      return;
+    }
+    this.setState({ busy: true, dot: 'go', dotPos: 0 });
+    this.t1 = setTimeout(function () { self.setState({ dotPos: 100 }); }, 30);
+    this.t2 = setTimeout(function () { self.finish(); }, 580);
+  }
+  finish() {
+    var s = this.state;
+    var fail = Math.random() * 100 < s.rate;
+    var ms = 40 + Math.floor(Math.random() * 90);
+    if (s.mode === 'half') {
+      if (fail) {
+        this.setState({ busy: false, dot: null, mode: 'open', cooldown: 5, win: [], log: this.entry('Trial failed · breaker OPEN again', 'stop') });
+      } else {
+        this.setState({ busy: false, dot: null, mode: 'closed', win: [], log: this.entry('Trial passed · breaker CLOSED', 'go') });
+      }
+      return;
+    }
+    var win = s.win.concat([fail ? 'f' : 's']).slice(-6);
+    var fails = win.filter(function (x) { return x === 'f'; }).length;
+    var log = this.entry(fail ? '500 · downstream error' : '200 OK · ' + ms + 'ms', fail ? 'stop' : 'go');
+    if (fails >= 3) {
+      log = this.entry('Breaker OPEN · ' + fails + ' of the last ' + win.length + ' calls failed', 'stop', log);
+      this.setState({ busy: false, dot: null, mode: 'open', cooldown: 5, win: win, log: log });
+      return;
+    }
+    this.setState({ busy: false, dot: null, win: win, log: log });
+  }
+  palette() {
+    if (this.props.theme === 'light') {
+      return { surface: '#FBF8F1', line: '#D3CAB6', text: '#1A1C17', muted: '#5E5C4C', signal: '#FFB020', signalText: '#8A4F00', onSignal: '#1A1C17', go: '#17703C', stop: '#B42E25', steel: '#2F6F87' };
+    }
+    return { surface: '#151812', line: '#2A2F25', text: '#E8E4D8', muted: '#9A9786', signal: '#FFB020', signalText: '#FFB020', onSignal: '#0D0F0C', go: '#3DDC84', stop: '#FF5A4E', steel: '#7FB3C8' };
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var c = this.palette();
+    function lamp(label, on, color) {
+      return { label: label, bg: on ? color : c.line, glow: on ? '0 0 14px ' + color : 'none', fg: on ? c.text : c.muted };
+    }
+    var lamps = [lamp('CLOSED', s.mode === 'closed', c.go), lamp('HALF-OPEN', s.mode === 'half', c.signal), lamp('OPEN', s.mode === 'open', c.stop)];
+    var gate = s.mode === 'closed' ? c.go : (s.mode === 'half' ? c.signal : c.stop);
+    var cells = [];
+    for (var i = 0; i < 6; i++) {
+      var v = s.win[i];
+      cells.push({ bg: v === 'f' ? c.stop : (v === 's' ? c.go : 'transparent') });
+    }
+    var fails = s.win.filter(function (x) { return x === 'f'; }).length;
+    var statusText = s.mode === 'closed' ? 'Closed: requests flow through to core banking.' : (s.mode === 'half' ? 'Half-open: one trial request is allowed through.' : 'Open: short-circuiting. Trial call in ' + s.cooldown + 's.');
+    var kindColor = { go: c.go, stop: c.stop, warn: c.signalText, info: c.muted };
+    return {
+      c: c,
+      lamps: lamps,
+      gate: gate,
+      cells: cells,
+      failSummary: s.win.length ? fails + ' FAILED · OPENS AT 3' : 'OPENS AT 3 FAILURES',
+      statusText: statusText,
+      rate: s.rate,
+      showDot: s.dot !== null,
+      dotLeft: 'calc(' + s.dotPos + '% - 7px)',
+      dotColor: s.dot === 'block' ? c.stop : c.steel,
+      auto: s.auto,
+      autoLabel: s.auto ? 'Auto traffic: on' : 'Auto traffic: off',
+      autoBorder: s.auto ? c.signal : c.line,
+      log: s.log.map(function (e) { return { text: e.text, color: kindColor[e.kind] || c.text }; }),
+      onSend: function () { self.send(); },
+      onAuto: function () { self.setState({ auto: !self.state.auto }); },
+      onRate: function (e) { self.setState({ rate: Number(e.target.value) }); },
+      onReset: function () {
+        clearTimeout(self.t1); clearTimeout(self.t2);
+        self.setState({ mode: 'closed', win: [], cooldown: 0, auto: false, busy: false, dot: null, dotPos: 0, log: [{ id: self.seq++, text: 'Reset · breaker CLOSED', kind: 'info' }] });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* Self-hosted fonts via Fontsource (SPEC §2.1). Latin subset only: keeps render-blocking CSS small. */
+@import "@fontsource/atkinson-hyperlegible-next/latin-400";
+@import "@fontsource/atkinson-hyperlegible-next/latin-500";
+@import "@fontsource/atkinson-hyperlegible-next/latin-700";
+@import "@fontsource/martian-mono/latin-300";
+@import "@fontsource/martian-mono/latin-400";
+@import "@fontsource/martian-mono/latin-500";
+
+@font-face {
+  font-family: "Big Shoulders Display Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("../../node_modules/@fontsource-variable/big-shoulders-display/files/big-shoulders-display-latin-wght-normal.woff2")
+    format("woff2-variations");
+}
+
+/*
+ * ambati.dev — "Signal Box" design tokens (SPEC §2).
+ *
+ * The spec token names (--bg, --surface, --muted …) are the source of truth.
+ * shadcn/ui components read Tailwind colour utilities (bg-primary, text-muted-foreground …),
+ * so `@theme inline` below maps those utilities straight onto the Signal Box tokens.
+ * We deliberately do NOT define shadcn's own --muted/--primary vars: SPEC uses --muted
+ * for secondary *text*, while shadcn uses it for a *background*.
+ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------- tokens */
+
+/* Light — "Enamel day" (default, also used before JS for `light` / system-light) */
+:root {
+  color-scheme: light;
+
+  --bg: #f2ede1;
+  --surface: #fbf8f1;
+  --surface-2: #e9e2d2;
+  --line: #d3cab6;
+  --text: #1a1c17;
+  /*
+   * AA note: SPEC lists #62604F / #B36A00 / #1E8F4E / #C8372D here, but #B36A00 (3.6:1),
+   * #1E8F4E (3.5:1) and #C8372D (4.4:1) fail WCAG AA as text on --bg. These are the
+   * darker values from the approved design (design/Main.dc.html palette()), all ≥ 4.7:1.
+   */
+  --muted: #5e5c4c;
+  --signal: #ffb020; /* fills: buttons, lamps */
+  --signal-text: #8a4f00; /* amber used as text on cream */
+  --signal-ring: #b36a00; /* SPEC deep amber — 3.6:1 on --bg, passes the 3:1 non-text rule for focus rings */
+  --on-signal: #1a1c17; /* text on amber fills (9.4:1) */
+  --go: #17703c;
+  --stop: #b42e25;
+  --steel: #2f6f87;
+  --glow: rgb(138 79 0 / 0.35);
+
+  /* Printed graph paper: 1px lines every 24px (5.5%, from design/Main.dc.html) */
+  --grid-color: rgb(26 28 23 / 0.055);
+  --page-pattern:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  --grain-opacity: 0;
+  --brass-ring: #8a4f00; /* token-bucket tokens (design/TokenBucket.dc.html) */
+
+  --radius: 10px;
+}
+
+/* Dark — "Night shift" */
+.dark {
+  color-scheme: dark;
+
+  --bg: #0d0f0c;
+  --surface: #151812;
+  --surface-2: #1d2119;
+  --line: #2a2f25;
+  --text: #e8e4d8;
+  --muted: #9a9786;
+  --signal: #ffb020;
+  --signal-text: #ffb020;
+  --signal-ring: #ffb020;
+  --on-signal: #0d0f0c;
+  --go: #3ddc84;
+  --stop: #ff5a4e;
+  --steel: #7fb3c8;
+  --glow: rgb(255 176 32 / 0.45);
+
+  /* Faint 24px dot grid (8%, from design/Main.dc.html); 2% film grain is body::before */
+  --grid-color: rgb(232 228 216 / 0.08);
+  --page-pattern: radial-gradient(var(--grid-color) 1px, transparent 1.4px);
+  --grain-opacity: 0.02;
+  --brass-ring: #9a6200;
+}
+
+/* ------------------------------------------------- Tailwind theme bridge */
+
+@theme inline {
+  /* Fonts (self-hosted via Fontsource, @imported at the top of this file) */
+  --font-display: "Big Shoulders Display Variable", "Big Shoulders Display", "Oswald", sans-serif;
+  --font-sans: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", ui-sans-serif, sans-serif;
+  --font-heading: var(--font-display);
+  --font-mono: "Martian Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  /* Type scale — values from design/Main.dc.html (design wins on visual questions) */
+  --text-display: clamp(64px, 9vw, 128px); /* name */
+  --text-display--line-height: 0.88;
+  --text-display--letter-spacing: 0.01em;
+  --text-h2: clamp(40px, 5vw, 64px); /* section plates */
+  --text-h2--line-height: 1;
+  --text-h2--letter-spacing: 0.02em;
+  --text-body: 17px;
+  --text-body--line-height: 1.6;
+  --text-lead: 19px; /* hero intro, about, contact lead */
+  --text-lead--line-height: 1.6;
+  --text-label: 0.6875rem; /* 11px */
+  --text-label--letter-spacing: 0.08em;
+  --text-label-lg: 0.8125rem; /* 13px */
+  --text-label-lg--letter-spacing: 0.08em;
+
+  /* Signal Box palette as utilities: bg-surface, text-signal-text, border-line … */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-signal: var(--signal);
+  --color-signal-text: var(--signal-text);
+  --color-on-signal: var(--on-signal);
+  --color-go: var(--go);
+  --color-stop: var(--stop);
+  --color-steel: var(--steel);
+  --color-brass-ring: var(--brass-ring);
+
+  /* shadcn/ui slots → Signal Box tokens */
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--text);
+  --color-primary: var(--signal);
+  --color-primary-foreground: var(--on-signal);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--text);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--surface-2);
+  --color-accent-foreground: var(--text);
+  --color-destructive: var(--stop);
+  --color-border: var(--line);
+  --color-input: var(--line);
+  --color-ring: var(--signal-ring);
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: var(--radius);
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+}
+
+/* ------------------------------------------------------------- base */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--bg);
+    background-image: var(--page-pattern);
+    background-size: 24px 24px;
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* 2% film grain (dark only; --grain-opacity is 0 in light). Covers the full page, never intercepts input. */
+  body {
+    position: relative;
+  }
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: var(--grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.6 -0.3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+  }
+
+  a {
+    color: inherit;
+    text-underline-offset: 4px;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* Visible amber focus ring everywhere (SPEC §9) */
+  :focus-visible {
+    outline: 2px solid var(--signal-ring);
+    outline-offset: 3px;
+  }
+
+  ::selection {
+    background: var(--signal);
+    color: var(--on-signal);
+  }
+}
+
+/* -------------------------------------------------------- utilities */
+
+/* Mono label: 11–13px, +0.08em tracking (SPEC §2.1) */
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Amber glow under the hero demo card (design: box-shadow 0 40px 90px -50px glow) */
+@utility shadow-glow {
+  box-shadow: 0 40px 90px -50px var(--glow);
+}
+
+/* Lever press: buttons push down 1px (SPEC §2.4.6) */
+@utility lever-press {
+  transition:
+    transform 80ms ease,
+    background-color 150ms ease,
+    color 150ms ease;
+  &:active {
+    transform: translateY(1px);
+  }
+}
+
+/* ------------------------------------------------- motion (design/Main.dc.html <style>) */
+
+/*
+ * Page load, the one big moment (SPEC §2.4.1). Pure CSS so it starts with first paint:
+ * name wipes in line by line (70–80ms stagger) → lamps power on → hero demo slides in.
+ */
+@keyframes rise {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(28px);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@keyframes lampOn {
+  0% { opacity: 0.15; }
+  40% { opacity: 1; }
+  55% { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+/* Flow lines move in the direction data moves */
+@keyframes flow {
+  from { background-position: 0 0; }
+  to { background-position: 24px 0; }
+}
+
+@utility anim-rise {
+  animation: rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@utility anim-lamp {
+  animation: lampOn 0.6s ease both;
+}
+@utility anim-fade-up {
+  animation: fadeUp 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* Links: amber underline wipes in (SPEC §2.4.6) */
+@utility link-wipe {
+  text-decoration: none;
+  background-image: linear-gradient(var(--signal-ring), var(--signal-ring));
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1.5px;
+  transition:
+    background-size 220ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    color 150ms ease;
+  &:hover,
+  &:focus-visible {
+    background-size: 100% 1.5px;
+    color: var(--signal-text);
+  }
+}
+
+/* --------------------------------------------------- reduced motion */
+
+/* Everything off, final states shown; demos still work by click (SPEC §2.4.7) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------ React Flow (read-only diagrams) */
+.signal-flow .react-flow {
+  background: transparent;
+}
+.signal-flow .react-flow__node {
+  cursor: default;
+}
+.signal-flow .react-flow__edge-path {
+  stroke-dasharray: 6 6;
+}
+.signal-flow .react-flow__pane {
+  cursor: default;
+}
+
+/* Try another ↻ — 250ms cross-fade between hero demos (SPEC §4.0) */
+@keyframes demoIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@utility anim-demo-in {
+  animation: demoIn 250ms ease both;
+}
+
+/* Theme lever: position + active label from <html data-theme-pref> (set pre-paint by index.html) */
+html[data-theme-pref="light"] .lever-handle {
+  transform: translateX(100%);
+}
+html[data-theme-pref="dark"] .lever-handle {
+  transform: translateX(200%);
+}
+html:not([data-theme-pref]) [data-lever="system"],
+html[data-theme-pref="system"] [data-lever="system"],
+html[data-theme-pref="light"] [data-lever="light"],
+html[data-theme-pref="dark"] [data-lever="dark"] {
+  color: var(--bg);
+}
+
+/* Hero demo slot before hydration: reserve the picked demo's height (data-hero-demo set pre-paint) */
+[data-hero-skeleton] {
+  display: none;
+}
+html:not([data-hero-demo]) [data-hero-skeleton="circuit-breaker"],
+html[data-hero-demo="circuit-breaker"] [data-hero-skeleton="circuit-breaker"],
+html[data-hero-demo="oauth-jwt"] [data-hero-skeleton="oauth-jwt"],
+html[data-hero-demo="token-bucket"] [data-hero-skeleton="token-bucket"] {
+  display: block;
+}

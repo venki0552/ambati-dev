@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo — Token bucket</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="box-sizing: border-box; width: 100%; padding: 22px; background: {{c.surface}}; color: {{c.text}}; font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', sans-serif; font-size: 15px; line-height: 1.5">
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div>
+<p style="margin: 0; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: {{c.muted}}">DEMO · RATE LIMITING</p>
+<h3 style="margin: 4px 0 0; font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em">Token bucket</h3>
+</div>
+<p style="margin: 0; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}; text-align: right">CAPACITY 5<br>REFILL 1 TOKEN / 2s</p>
+</div>
+
+<div role="img" aria-label="{{bucketLabel}}" style="display: flex; align-items: center; gap: 12px; margin: 24px 0 10px; padding: 16px; border: 2px solid {{c.line}}; border-radius: 14px; background: {{c.surface2}}">
+<sc-for list="{{slots}}" as="t" hint-placeholder-count="5">
+<span style="position: relative; width: 44px; height: 44px; box-sizing: border-box; border-radius: 50%; border: 2px {{t.style}} {{t.border}}; background: {{t.bg}}; box-shadow: {{t.glow}}; transition: background-color 200ms ease, box-shadow 200ms ease, border-color 200ms ease">
+<span style="position: absolute; inset: 9px; border-radius: 50%; border: 2px solid {{t.inner}}"></span>
+</span>
+</sc-for>
+<span style="margin-left: auto; font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 34px; line-height: 1">{{tokens}}/5</span>
+</div>
+
+<div aria-hidden="true" style="height: 4px; border-radius: 2px; background: {{c.line}}; overflow: hidden; margin-bottom: 6px">
+<div style="height: 4px; width: {{refillPct}}; background: {{c.signal}}; transition: width 200ms linear"></div>
+</div>
+<p style="margin: 0 0 18px; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; color: {{c.muted}}">{{refillText}}</p>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px">
+<button type="button" onClick="{{onSend}}" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: {{c.signal}}; color: {{c.onSignal}}; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer">Send request</button>
+<button type="button" onClick="{{onBurst}}" style="min-height: 44px; padding: 0 16px; border: 1.5px solid {{c.text}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer">Burst ×10</button>
+<button type="button" onClick="{{onReset}}" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: {{c.muted}}; font-family: inherit; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer">Reset</button>
+</div>
+
+<div role="status" style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px; min-height: 40px">
+<span style="font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 34px; line-height: 1; color: {{statusColor}}">{{statusCode}}</span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 11px; color: {{statusColor}}">{{statusText}}</span>
+</div>
+
+<div aria-live="polite" style="margin-top: 12px; padding-top: 12px; min-height: 96px; border-top: 1px solid {{c.line}}; font-family: 'Martian Mono', monospace; font-size: 11px; line-height: 1.5">
+<sc-for list="{{log}}" as="e" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; padding: 3px 0; color: {{e.color}}"><span aria-hidden="true" style="color: {{c.muted}}">›</span><span>{{e.text}}</span></div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":600,"height":560}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.seq = 1;
+    this.state = { tokens: 5, elapsed: 0, status: null, log: [{ id: 0, text: 'Ready · bucket full', kind: 'info' }] };
+  }
+  componentDidMount() {
+    var self = this;
+    this.tick = setInterval(function () {
+      var s = self.state;
+      if (s.tokens >= 5) { if (s.elapsed !== 0) self.setState({ elapsed: 0 }); return; }
+      var e = s.elapsed + 200;
+      if (e >= 2000) self.setState({ tokens: s.tokens + 1, elapsed: 0 });
+      else self.setState({ elapsed: e });
+    }, 200);
+  }
+  componentWillUnmount() { clearInterval(this.tick); }
+  entry(text, kind) { return [{ id: this.seq++, text: text, kind: kind }].concat(this.state.log).slice(0, 4); }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var light = this.props.theme === 'light';
+    var c = light
+      ? { surface: '#FBF8F1', surface2: '#E9E2D2', line: '#D3CAB6', text: '#1A1C17', muted: '#5E5C4C', signal: '#FFB020', signalText: '#8A4F00', onSignal: '#1A1C17', go: '#17703C', stop: '#B42E25', brassRing: '#8A4F00' }
+      : { surface: '#151812', surface2: '#1D2119', line: '#2A2F25', text: '#E8E4D8', muted: '#9A9786', signal: '#FFB020', signalText: '#FFB020', onSignal: '#0D0F0C', go: '#3DDC84', stop: '#FF5A4E', brassRing: '#9A6200' };
+    var slots = [];
+    for (var i = 0; i < 5; i++) {
+      var full = i < s.tokens;
+      slots.push({
+        bg: full ? c.signal : 'transparent',
+        border: full ? c.brassRing : c.line,
+        style: full ? 'solid' : 'dashed',
+        inner: full ? c.brassRing : 'transparent',
+        glow: full ? '0 0 12px rgba(255,176,32,0.35)' : 'none'
+      });
+    }
+    var st = s.status;
+    var kindColor = { go: c.go, stop: c.stop, warn: c.signalText, info: c.muted };
+    return {
+      c: c,
+      slots: slots,
+      tokens: s.tokens,
+      bucketLabel: s.tokens + ' of 5 tokens left',
+      refillPct: s.tokens >= 5 ? '100%' : Math.round(s.elapsed / 20) + '%',
+      refillText: s.tokens >= 5 ? 'BUCKET FULL' : 'NEXT TOKEN IN ' + ((2000 - s.elapsed) / 1000).toFixed(1) + 's',
+      statusCode: st ? st.code : '—',
+      statusText: st ? st.text : 'No requests yet',
+      statusColor: st ? kindColor[st.kind] : c.muted,
+      log: s.log.map(function (e) { return { text: e.text, color: kindColor[e.kind] || c.text }; }),
+      onSend: function () {
+        var t = self.state.tokens;
+        if (t > 0) {
+          self.setState({ tokens: t - 1, status: { code: '200', text: 'OK · ' + (t - 1) + ' tokens left', kind: 'go' }, log: self.entry('200 OK · ' + (t - 1) + ' tokens left', 'go') });
+        } else {
+          self.setState({ status: { code: '429', text: 'Too Many Requests · Retry-After: 2', kind: 'stop' }, log: self.entry('429 Too Many Requests · Retry-After: 2', 'stop') });
+        }
+      },
+      onBurst: function () {
+        var t = self.state.tokens;
+        var pass = Math.min(t, 10);
+        var block = 10 - pass;
+        self.setState({ tokens: t - pass, status: { code: block ? '429' : '200', text: pass + ' passed · ' + block + ' rejected', kind: block ? 'stop' : 'go' }, log: self.entry('Burst ×10 → ' + pass + ' × 200, ' + block + ' × 429', block ? 'stop' : 'go') });
+      },
+      onReset: function () { self.setState({ tokens: 5, elapsed: 0, status: null, log: [{ id: self.seq++, text: 'Reset · bucket full', kind: 'info' }] }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

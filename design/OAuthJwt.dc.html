@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo — OAuth with PKCE, then JWT</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&amp;display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="box-sizing: border-box; width: 100%; padding: 22px; background: {{c.surface}}; color: {{c.text}}; font-family: 'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible', sans-serif; font-size: 15px; line-height: 1.5">
+<p style="margin: 0; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.12em; color: {{c.muted}}">DEMO · IDENTITY</p>
+<h3 style="margin: 4px 0 16px; font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; letter-spacing: 0.02em">OAuth + PKCE → JWT</h3>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.06em; text-align: center">
+<span style="padding: 8px 4px; border: 1px solid {{c.line}}; border-radius: 8px; background: {{c.surface2}}">BROWSER APP</span>
+<span style="padding: 8px 4px; border: 1px solid {{c.line}}; border-radius: 8px; background: {{c.surface2}}">AUTH SERVER</span>
+<span style="padding: 8px 4px; border: 1px solid {{c.line}}; border-radius: 8px; background: {{c.surface2}}">BANKING API</span>
+</div>
+
+<ol style="list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{steps}}" as="s" hint-placeholder-count="6">
+<li style="display: flex; gap: 12px; align-items: flex-start; padding: 8px 10px; border: 1px solid {{s.border}}; border-radius: 10px; background: {{s.bg}}; transition: border-color 200ms ease, background-color 200ms ease">
+<span style="flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: {{s.numBg}}; color: {{s.numFg}}; font-family: 'Martian Mono', monospace; font-size: 11px">{{s.num}}</span>
+<span style="flex: 1 1 auto; min-width: 0">
+<span style="display: block; font-size: 14px; color: {{s.textColor}}">{{s.text}}</span>
+<span style="display: block; font-family: 'Martian Mono', monospace; font-size: 9px; letter-spacing: 0.06em; color: {{c.muted}}">{{s.route}}</span>
+</span>
+</li>
+</sc-for>
+</ol>
+
+<div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px">
+<button type="button" onClick="{{onNext}}" style="min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: {{c.signal}}; color: {{c.onSignal}}; font-family: inherit; font-weight: 700; font-size: 15px; cursor: pointer">{{nextLabel}}</button>
+<button type="button" onClick="{{onPlay}}" style="min-height: 44px; padding: 0 16px; border: 1.5px solid {{c.line}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-size: 15px; cursor: pointer">Play all</button>
+<button type="button" onClick="{{onReset}}" style="min-height: 44px; padding: 0 14px; border: 0; border-radius: 10px; background: transparent; color: {{c.muted}}; font-family: inherit; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; cursor: pointer">Reset</button>
+</div>
+
+<div style="padding: 12px; border: 1px solid {{c.line}}; border-radius: 10px; background: {{c.surface2}}; font-family: 'Martian Mono', monospace; font-size: 10px; line-height: 1.7; word-break: break-all">
+<div><span style="color: {{c.muted}}">code_verifier </span>{{verifierShort}}</div>
+<div><span style="color: {{c.muted}}">code_challenge (S256) </span>{{challengeShort}}</div>
+</div>
+
+<sc-if value="{{noToken}}" hint-placeholder-val="{{ true }}">
+<p style="margin: 14px 0 0; font-family: 'Martian Mono', monospace; font-size: 11px; color: {{c.muted}}">The access token appears after step 5.</p>
+</sc-if>
+<sc-if value="{{hasToken}}" hint-placeholder-val="{{ false }}">
+<div style="margin-top: 14px; padding: 12px; border: 1px solid {{tokenBorder}}; border-radius: 10px">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-bottom: 8px; font-family: 'Martian Mono', monospace; font-size: 10px; letter-spacing: 0.08em">
+<span style="color: {{c.muted}}">ACCESS TOKEN · HS256 · DEMO KEY</span>
+<span style="color: {{expColor}}">{{expLabel}}</span>
+</div>
+<p style="margin: 0 0 10px; font-family: 'Martian Mono', monospace; font-size: 10px; line-height: 1.6; word-break: break-all"><span style="color: {{c.steel}}">{{hSeg}}</span>.<span style="color: {{payloadColor}}">{{pShown}}</span>.<span style="color: {{c.go}}">{{sig}}</span></p>
+<pre style="margin: 0; padding: 10px; border-radius: 8px; background: {{c.surface2}}; font-family: 'Martian Mono', monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; color: {{payloadColor}}">{{payloadJson}}</pre>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px">
+<button type="button" disabled="{{noToken}}" onClick="{{onCall}}" style="min-height: 44px; padding: 0 14px; border: 1.5px solid {{c.text}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-weight: 700; font-size: 14px; cursor: pointer; opacity: {{actOpacity}}">Call API</button>
+<button type="button" disabled="{{noToken}}" aria-pressed="{{tampered}}" onClick="{{onTamper}}" style="min-height: 44px; padding: 0 14px; border: 1.5px solid {{tamperBorder}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-size: 14px; cursor: pointer; opacity: {{actOpacity}}">Tamper: role → admin</button>
+<button type="button" disabled="{{noToken}}" onClick="{{onExpire}}" style="min-height: 44px; padding: 0 14px; border: 1.5px solid {{c.line}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-size: 14px; cursor: pointer; opacity: {{actOpacity}}">Fast-forward 15 min</button>
+<button type="button" disabled="{{noToken}}" onClick="{{onRefresh}}" style="min-height: 44px; padding: 0 14px; border: 1.5px solid {{c.line}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-size: 14px; cursor: pointer; opacity: {{actOpacity}}">Use refresh token</button>
+<button type="button" disabled="{{noCode}}" onClick="{{onSteal}}" style="min-height: 44px; padding: 0 14px; border: 1.5px solid {{c.line}}; border-radius: 10px; background: transparent; color: {{c.text}}; font-family: inherit; font-size: 14px; cursor: pointer; opacity: {{codeOpacity}}">Replay stolen code</button>
+</div>
+
+<div role="status" style="display: flex; align-items: baseline; gap: 12px; margin-top: 16px; min-height: 40px">
+<span style="font-family: 'Big Shoulders Display', 'Big Shoulders', 'Oswald', sans-serif; font-weight: 800; font-size: 34px; line-height: 1; color: {{statusColor}}">{{statusCode}}</span>
+<span style="font-family: 'Martian Mono', monospace; font-size: 11px; color: {{statusColor}}">{{statusText}}</span>
+</div>
+
+<div aria-live="polite" style="margin-top: 12px; padding-top: 12px; min-height: 96px; border-top: 1px solid {{c.line}}; font-family: 'Martian Mono', monospace; font-size: 11px; line-height: 1.5">
+<sc-for list="{{log}}" as="e" hint-placeholder-count="4">
+<div style="display: flex; gap: 10px; padding: 3px 0; color: {{e.color}}"><span aria-hidden="true" style="color: {{c.muted}}">›</span><span>{{e.text}}</span></div>
+</sc-for>
+</div>
+<p style="margin: 10px 0 0; font-size: 12px; color: {{c.muted}}">Simulated in your browser with a demo key. Real systems sign with asymmetric keys (RS256 or ES256) published at a JWKS endpoint.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":600,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.seq = 1;
+    this.state = { step: 0, verifier: '', challenge: 'computing…', hSeg: '', pSeg: '', pTampered: '', sig: '', iat: 0, exp: 0, tampered: false, expired: false, status: null, playing: false, log: [{ id: 0, text: 'Ready · press Next step', kind: 'info' }] };
+  }
+  componentDidMount() { this.makePkce(); this.issue(); }
+  componentWillUnmount() { clearInterval(this.playT); }
+  b64(bytes) {
+    var s = '';
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  b64str(str) { return this.b64(new TextEncoder().encode(str)); }
+  makePkce() {
+    var self = this;
+    var bytes = new Uint8Array(32);
+    try { window.crypto.getRandomValues(bytes); } catch (e) { for (var i = 0; i < 32; i++) bytes[i] = Math.floor(Math.random() * 256); }
+    var verifier = this.b64(bytes);
+    this.setState({ verifier: verifier });
+    try {
+      window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then(function (buf) {
+        self.setState({ challenge: self.b64(new Uint8Array(buf)) });
+      }).catch(function () { self.setState({ challenge: '(WebCrypto unavailable here)' }); });
+    } catch (e) { this.setState({ challenge: '(WebCrypto unavailable here)' }); }
+  }
+  payload(role, iat, exp) {
+    return { sub: 'user_1042', role: role, scope: 'accounts:read', iat: iat, exp: exp };
+  }
+  issue() {
+    var self = this;
+    var iat = Math.floor(Date.now() / 1000);
+    var exp = iat + 900;
+    var h = this.b64str(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+    var p = this.b64str(JSON.stringify(this.payload('customer', iat, exp)));
+    var pt = this.b64str(JSON.stringify(this.payload('admin', iat, exp)));
+    this.setState({ hSeg: h, pSeg: p, pTampered: pt, iat: iat, exp: exp, sig: '…' });
+    try {
+      var enc = new TextEncoder();
+      window.crypto.subtle.importKey('raw', enc.encode('demo-key-not-a-real-secret'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+        .then(function (k) { return window.crypto.subtle.sign('HMAC', k, enc.encode(h + '.' + p)); })
+        .then(function (buf) { self.setState({ sig: self.b64(new Uint8Array(buf)) }); })
+        .catch(function () { self.setState({ sig: 'demo-signature' }); });
+    } catch (e) { this.setState({ sig: 'demo-signature' }); }
+  }
+  entry(text, kind) {
+    return [{ id: this.seq++, text: text, kind: kind }].concat(this.state.log).slice(0, 4);
+  }
+  result() {
+    if (this.state.tampered) return { code: '401', text: 'invalid_signature · payload changed after signing', kind: 'stop' };
+    if (this.state.expired) return { code: '401', text: 'token_expired · use the refresh token', kind: 'stop' };
+    return { code: '200', text: 'OK · 3 accounts returned', kind: 'go' };
+  }
+  next() {
+    var s = this.state;
+    if (s.step >= 6) return;
+    var n = s.step + 1;
+    var short = ['PKCE pair created', 'Redirected to /authorize', 'Signed in and consented', 'Authorization code received', 'Tokens issued: JWT (15 min) + refresh', 'GET /accounts with Bearer JWT'];
+    var upd = { step: n, log: this.entry('Step ' + n + ' · ' + short[n - 1], n === 6 ? 'go' : 'info') };
+    if (n === 6) upd.status = this.result();
+    this.setState(upd);
+  }
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var light = this.props.theme === 'light';
+    var c = light
+      ? { surface: '#FBF8F1', surface2: '#E9E2D2', line: '#D3CAB6', text: '#1A1C17', muted: '#5E5C4C', signal: '#FFB020', signalText: '#8A4F00', onSignal: '#1A1C17', go: '#17703C', stop: '#B42E25', steel: '#2F6F87' }
+      : { surface: '#151812', surface2: '#1D2119', line: '#2A2F25', text: '#E8E4D8', muted: '#9A9786', signal: '#FFB020', signalText: '#FFB020', onSignal: '#0D0F0C', go: '#3DDC84', stop: '#FF5A4E', steel: '#7FB3C8' };
+    var defs = [
+      ['Create a random code_verifier and its SHA-256 code_challenge.', 'BROWSER APP'],
+      ['Redirect to /authorize with the code_challenge (method S256).', 'BROWSER APP → AUTH SERVER'],
+      ['You sign in and consent (simulated).', 'YOU → AUTH SERVER'],
+      ['Redirect back with a one-time authorization code.', 'AUTH SERVER → BROWSER APP'],
+      ['Swap the code + code_verifier for a JWT (15 min) and a refresh token.', 'BROWSER APP → AUTH SERVER'],
+      ['Call GET /accounts with Authorization: Bearer <JWT>.', 'BROWSER APP → BANKING API']
+    ];
+    var steps = defs.map(function (d, i) {
+      var done = s.step > i + 1 || (s.step === 6 && i === 5);
+      var active = s.step === i + 1 && s.step !== 6;
+      return {
+        num: done ? '✓' : String(i + 1), text: d[0], route: d[1],
+        border: active ? c.signal : c.line,
+        bg: active ? c.surface2 : 'transparent',
+        numBg: done ? c.go : (active ? c.signal : c.surface2),
+        numFg: done || active ? c.onSignal : c.muted,
+        textColor: done || active ? c.text : c.muted
+      };
+    });
+    var role = s.tampered ? 'admin' : 'customer';
+    var shownExp = s.expired ? s.iat - 1 : s.exp;
+    var st = s.status;
+    var kindColor = { go: c.go, stop: c.stop, warn: c.signalText, info: c.muted };
+    var hasToken = s.step >= 5;
+    return {
+      c: c,
+      steps: steps,
+      nextLabel: s.step >= 6 ? 'Done' : (s.step === 0 ? 'Start' : 'Next step'),
+      verifierShort: s.verifier ? s.verifier.slice(0, 28) + '…' : '…',
+      challengeShort: s.challenge.length > 30 ? s.challenge.slice(0, 28) + '…' : s.challenge,
+      hasToken: hasToken,
+      noToken: !hasToken,
+      noCode: s.step < 4,
+      actOpacity: hasToken ? 1 : 0.45,
+      codeOpacity: s.step >= 4 ? 1 : 0.45,
+      tampered: s.tampered,
+      tamperBorder: s.tampered ? c.stop : c.line,
+      tokenBorder: s.tampered || s.expired ? c.stop : c.line,
+      hSeg: s.hSeg,
+      pShown: s.tampered ? s.pTampered : s.pSeg,
+      sig: s.sig,
+      payloadColor: s.tampered ? c.stop : c.signalText,
+      payloadJson: JSON.stringify(this.payload(role, s.iat, shownExp), null, 2),
+      expLabel: s.expired ? 'EXPIRED' : 'VALID · 15 MIN',
+      expColor: s.expired ? c.stop : c.go,
+      statusCode: st ? st.code : '—',
+      statusText: st ? st.text : 'No API call yet',
+      statusColor: st ? kindColor[st.kind] : c.muted,
+      log: s.log.map(function (e) { return { text: e.text, color: kindColor[e.kind] || c.text }; }),
+      onNext: function () { self.next(); },
+      onPlay: function () {
+        if (self.state.playing || self.state.step >= 6) return;
+        self.setState({ playing: true });
+        self.playT = setInterval(function () {
+          if (self.state.step >= 6) { clearInterval(self.playT); self.setState({ playing: false }); return; }
+          self.next();
+        }, 900);
+      },
+      onReset: function () {
+        clearInterval(self.playT);
+        self.setState({ step: 0, tampered: false, expired: false, status: null, playing: false, log: [{ id: self.seq++, text: 'Reset · new PKCE pair', kind: 'info' }] });
+        self.makePkce(); self.issue();
+      },
+      onCall: function () { var r = self.result(); self.setState({ status: r, log: self.entry(r.code + ' · ' + r.text, r.kind) }); },
+      onTamper: function () {
+        var t = !self.state.tampered;
+        self.setState({ tampered: t, log: self.entry(t ? 'Payload edited: role "customer" → "admin"' : 'Payload restored', t ? 'warn' : 'info') });
+      },
+      onExpire: function () { self.setState({ expired: true, log: self.entry('Clock +15 min · access token expired', 'warn') }); },
+      onRefresh: function () {
+        self.issue();
+        self.setState({ expired: false, tampered: false, log: self.entry('Refresh token used · new access token issued', 'go') });
+      },
+      onSteal: function () {
+        var r = { code: '400', text: 'invalid_grant · code_verifier missing', kind: 'stop' };
+        self.setState({ status: r, log: self.entry('Attacker replays the stolen code without the verifier', 'warn') });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
