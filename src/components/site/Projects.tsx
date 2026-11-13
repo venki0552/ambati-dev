@@ -19,7 +19,7 @@ export function Projects({ ragDiagram }: { ragDiagram: ReactNode }) {
         </article>
       )}
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(300px,100%),1fr))] gap-5">
+      <div className="grid gap-5 md:grid-cols-2">
         {rest.map((p) => (
           <article key={p.id} className="flex flex-col rounded-[18px] border border-line bg-surface p-6">
             <Eyebrow className="mb-2.5 tracking-[0.1em]">{p.tags}</Eyebrow>

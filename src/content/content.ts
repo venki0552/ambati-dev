@@ -305,6 +305,17 @@ export const projects: Project[] = [
     ],
   },
   {
+    // Facts from the repo README (github.com/venki0552/Detect-Agents, Nov 12, 2026), incl. its own "alpha" status.
+    id: "agent-detect",
+    name: "agent-detect",
+    subtitle: "Human or AI agent?",
+    tags: "TYPESCRIPT · FRAUD & SECURITY · ALPHA",
+    description:
+      "Tells whether a human or an AI agent is driving a sensitive web session, and decides what to do before money moves: allow, notify, step up or block. The browser only collects; the server decides, with explainable rules and no ML model.",
+    metric: { value: "34", label: "EXPLAINABLE RULES" },
+    links: [{ label: "GitHub ↗", href: "https://github.com/venki0552/Detect-Agents" }],
+  },
+  {
     id: "slg",
     name: "slg",
     subtitle: "Semantic Lore for Git",
