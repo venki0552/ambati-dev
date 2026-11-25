@@ -305,6 +305,17 @@ export const projects: Project[] = [
     ],
   },
   {
+    // Facts from the repo README (github.com/venki0552/see-my-trackers, v1.0.0, Nov 24, 2026).
+    id: "see-my-trackers",
+    name: "See My Trackers",
+    subtitle: "Who tracks you after you say no?",
+    tags: "TYPESCRIPT · PRIVACY · CHROME / EDGE / FIREFOX",
+    description:
+      "A browser extension that records your cookie-banner choice and shows which tracking companies your browser still talks to afterwards, with evidence: data sent, cookies set or read, IDs shared between companies. Local-only, with no network calls of its own.",
+    metric: { value: "10", label: "EVIDENCE RULES" },
+    links: [{ label: "GitHub ↗", href: "https://github.com/venki0552/see-my-trackers" }],
+  },
+  {
     // Facts from the repo README (github.com/venki0552/Detect-Agents, Nov 12, 2026), incl. its own "alpha" status.
     id: "agent-detect",
     name: "agent-detect",

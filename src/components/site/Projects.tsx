@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 import { projects, sections } from "@/content/content"
 import { ExtLink, Eyebrow, SectionPlate } from "@/components/site/primitives"
 
-/** Memory Palace (featured, with its pipeline) + slg, PageSkim, DevTools (SPEC §3 row 5). */
+/** Memory Palace (featured, with its pipeline) + See My Trackers, agent-detect, slg, PageSkim, DevTools (SPEC §3 row 5). */
 export function Projects({ ragDiagram }: { ragDiagram: ReactNode }) {
   const [featured, ...rest] = projects
   return (
